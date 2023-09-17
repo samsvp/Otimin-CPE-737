@@ -7,40 +7,10 @@ from PIL import Image, ImageTk
 
 import problem1
 
-def create_plot_window(errors, k, tau):
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
-    ax.plot(errors)
-    ax.set_title("Matplotlib Plot")
-    ax.set_xlabel("Iteração")
-    ax.set_ylabel("Erro")
-    ax.set_title(f"Valores ótimos: Tau: {tau:.2f}, K: {k:.2f}; Erro: {errors[-1]}")
-    
-    # Convert Matplotlib figure to an image
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    img = Image.open(buf)
-    img = ImageTk.PhotoImage(img)
-    
-    # Create a new window for the Matplotlib plot
-    layout = [
-        [sg.Image(data=img, key='-PLOT-')],
-        [sg.Button("Close")]
-    ]
-    
-    window = sg.Window("Matplotlib Plot", layout)
-    
-    while True:
-        event, values = window.read()
-        if event in (sg.WIN_CLOSED, "Close"):
-            break
-    
-    window.close()
-
 # Create a Matplotlib figure
 fig, ax = plt.subplots(figsize=(8, 6))
 
+canvas_elem = sg.Image(key='-CANVAS-')
 # Define the layout
 left_column = [
     [sg.Text("Select an option:")],
@@ -59,15 +29,6 @@ left_column = [
     [sg.Text("", key='-RESULT-')],
 ]
 
-right_column = [
-    [sg.Canvas(key='-CANVAS-')],
-]
-
-
-
-selected_option = None
-selected_number = None
-canvas_elem = sg.Image(key='-CANVAS-')
 # Event loop
 layout = [
     [
@@ -78,6 +39,9 @@ layout = [
 ]
 # Create the window
 window = sg.Window("Dropdown GUI", layout, resizable=True)
+
+selected_option = None
+selected_number = None
 
 while True:
     event, values = window.read()
