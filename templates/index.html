@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matplotlib Figure in Flask</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-right: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        input {
+            text-align: right;
+        }
+
+        button {
+            margin-top: 20px;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="left-column">
+        
+    <label for="method">Método:</label>
+    <select id="method" name="method" required>
+        <option value="gradiente" selected="selected">Descida de Gradiente</option>
+        <option value="gauss_newton">Gauss Newton</option>
+        <option value="lev">Levenberg-Marquardt</option>
+    </select>
+
+    <form id="myform" method="post" action="/gradient-image">
+        <label for="npoints">Números de pontos</label>
+        <select name="npoints" required>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="-1">Todos</option>
+        </select>
+
+        <label for="iterations">Iterações:</label>
+        <input type="number" name="iterations" step="10" required value="100000">
+
+        <label for="learning_rate">Learning Rate:</label>
+        <input type="number" name="learning_rate" step="0.01" required value="0.001">
+
+        <label for="tolerance">Tolerância:</label>
+        <input type="number" name="tolerance" step="0.01" required value="1e-10">
+        
+        <button type="submit">Generate Plot</button>
+    </form>
+    </div>
+    <img id="myimg" src="http://localhost:5000/image" alt="Matplotlib Figure">
+
+
+     <script>
+         document.getElementById('method').value = 'gradiente';
+         const myform = document.getElementById("myform");
+         const gd_html = `
+        <label for="npoints">Números de pontos</label>
+        <select name="npoints" required>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="-1">Todos</option>
+        </select>
+
+        <label for="iterations">Iterações:</label>
+        <input type="number" name="iterations" step="10" required value="100000">
+
+        <label for="learning_rate">Learning Rate:</label>
+        <input type="number" name="learning_rate" step="0.01" required value="0.001">
+
+        <label for="tolerance">Tolerância:</label>
+        <input type="number" name="tolerance" step="0.01" required value="1e-10">
+        
+        <button type="submit">Generate Plot</button>
+        `;
+
+        const newton_html = `
+        <label for="npoints">Números de pontos</label>
+        <select name="npoints" required>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="-1">Todos</option>
+        </select>
+
+        <label for="iterations">Iterações:</label>
+        <input type="number" name="iterations" step="10" required value="100">
+
+        <label for="tolerance">Tolerância:</label>
+        <input type="number" name="tolerance" step="0.01" required value="1e-10">
+        
+        <label for="k0">K inicial:</label>
+        <input type="number" name="k0" step="1" required value="10">
+        
+        <label for="tau0">Tau inicial:</label>
+        <input type="number" name="tau0" step="1" required value="1">
+
+        <button type="submit">Generate Plot</button>
+        `;
+
+        const lev_html = `
+        <label for="npoints">Números de pontos</label>
+        <select name="npoints" required>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="-1">Todos</option>
+        </select>
+
+        <label for="k0">K inicial:</label>
+        <input type="number" name="k0" step="1" required value="10">
+        
+        <label for="tau0">Tau inicial:</label>
+        <input type="number" name="tau0" step="1" required value="10">
+
+        <button type="submit">Generate Plot</button>
+        `;
+
+        // Function to handle the change in the "Método" input
+        function onMethodChange() {
+            var methodSelect = document.getElementById('method');
+            var selectedMethod = methodSelect.value;
+
+            if (selectedMethod == "gauss_newton") {
+                myform.innerHTML = newton_html;
+                myform.action = "/newton-image"
+            } else if (selectedMethod == "gradiente") {
+                myform.innerHTML = gd_html;
+                myform.action = "/gradient-image"
+            } else if (selectedMethod == "lev") {
+                myform.innerHTML = lev_html;
+                myform.action = "/levenberg-image"
+            }
+            // You can perform additional actions based on the selected method if needed
+            console.log('Selected Method:', selectedMethod);
+        }
+
+        document.getElementById('method').addEventListener('change', onMethodChange);
+
+        document.getElementById('myform').addEventListener('submit', function(event) {
+            event.preventDefault();  // Prevent the default form submission
+
+            // Gather form data
+            var formData = new FormData(event.target);
+
+            // Get the selected method from the dropdown
+            var methodSelect = document.getElementById('method');
+            var selectedMethod = methodSelect.value;
+
+            // Add the selected method to the form data
+            formData.append('method', selectedMethod);
+
+            // Use Fetch API to send a new POST request
+            fetch(myform.action, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Optionally, update the image source
+                var image = document.getElementById('myimg');
+                image.src = 'http://localhost:5000/image?timestamp=' + Date.now();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>

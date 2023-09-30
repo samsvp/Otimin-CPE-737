@@ -1,98 +1,170 @@
-import PySimpleGUI as sg
+from flask import Flask, send_file, render_template, request, redirect
+from io import BytesIO
+import seaborn as sns
+import matplotlib.pylab as pl
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.gridspec as gridspec
 import numpy as np
-import io
-from PIL import Image, ImageTk
 
-import problem1
+import solvers
+import levenberg
 
-# Create a Matplotlib figure
-fig, ax = plt.subplots(figsize=(8, 6))
 
-canvas_elem = sg.Image(key='-CANVAS-')
-# Define the layout
-left_column = [
-    [sg.Text("Select an option:")],
-    [sg.Combo(["Fibonacci", "Razão áurea", "Descida máxima", "Descida de gradiente", "Newton", "Quasi-Newton", "Brent"], key='-OPTION-', enable_events=True)],
-    [sg.Text("Select a number:")],
-    [sg.Combo(["3", "5", "Todas"], key='-NUMBER-', enable_events=True)],
-    [sg.Text("K inicial:")],
-    [sg.InputText(key='K', enable_events=True, justification='right', size=(10, 1))],
-    [sg.Text("Tau inicial:")],
-    [sg.InputText(key='tau', enable_events=True, justification='right', size=(10, 1))],
-    [sg.Text("Alpha:")],
-    [sg.InputText(key='alpha', enable_events=True, justification='right', size=(10, 1))],
-    [sg.Text("Iterações:")],
-    [sg.InputText(key='iters', enable_events=True, justification='right', size=(10, 1))],
-    [sg.Button("Calculate")],
-    [sg.Text("", key='-RESULT-')],
-]
+app = Flask(__name__)
 
-# Event loop
-layout = [
-    [
-        sg.Column(left_column, element_justification='center'),
-        sg.VerticalSeparator(),
-        sg.Column([[canvas_elem]], element_justification='center', size=(800, 600))
-    ]
-]
-# Create the window
-window = sg.Window("Dropdown GUI", layout, resizable=True)
+def get_y_pred():
+    global Y_pred, k, tau
+    Y_pred = k*(1 - np.exp(-X/tau))
 
-selected_option = None
-selected_number = None
 
-while True:
-    event, values = window.read()
+def get_xy():
+    global npoints
+    if npoints != -1:
+        idxs = sorted(np.random.choice(solvers.X.shape[0], npoints, replace=False))
+        myX = solvers.X[idxs]
+        myY = solvers.y[idxs]
+    else:
+        npoints = len(solvers.X)
+        myX = solvers.X
+        myY = solvers.y
+    return myX, myY
 
-    if event == sg.WINDOW_CLOSED:
-        break
-    elif event == "Calculate":
-        selected_option = values['-OPTION-']
-        selected_number = values['-NUMBER-']
-        k0 = None
-        tau0 = None
-        iters = None
-        alpha = None
-        try:
-            k0 = float(values['K'])
-            tau0 = float(values['tau'])
-            iters = int(values['iters'])
-            alpha = float(values['alpha'])
-        except Exception as e:
-            print(e)
-            result_text = f"Valor inválido para Iterações: {iters}, Alpha: {alpha} ou Tau: {tau0} ou K: {k0}\n{e}"
-            window['-RESULT-'].update(result_text)
-            continue
-        
-        # Update the Matplotlib plot
-        errors, k, tau = problem1.gradient_descent(alpha, iters, k0, tau0)
-        # Downsample the errors array if it's too large
 
-        result_text = f"Tau ótimo: {tau:.2f}, K ótimo: {k:.2f}, Erro: {errors[-1]}"
-        window['-RESULT-'].update(result_text)
-        ax.clear()
-        ax.plot(errors)
-        ax.set_title("Matplotlib Plot")
-        ax.set_xlabel("Iteração")
-        ax.set_ylabel("Erro")
-        ax.set_title(f"Valores ótimos: Tau: {tau:.2f}, K: {k:.2f}; Erro: {errors[-1]}")
+X = np.arange(0, 10, 0.1)
+k = 0.5
+tau = 1
+npoints = len(solvers.X)
+Y_pred = []
+get_y_pred()
+method = ""
+cvg_hst = []
 
-        result_text = f"Tau ótimo: {tau:.2f}, K ótimo: {k:.2f}, Erro: {errors[-1]}"
-        window['-RESULT-'].update(result_text)
 
-        # Convert Matplotlib figure to an image
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        img = Image.open(buf)
-        img.thumbnail((800, 600))  # Resize the image to fit the canvas
-        img_data = ImageTk.PhotoImage(img)
+@app.route('/')
+def main():
+    return render_template('index.html')
 
-        # Update the canvas with the Matplotlib plot image
-        canvas_elem.update(data=img_data)
 
-# Close the window
-window.close()
+@app.route('/image')
+def image():
+    if method != "lev":
+        # Step 1: Generate Matplotlib Figure
+        fig, ax = plt.subplots()
+        ax.scatter(solvers.X, solvers.y, marker='o')
+        ax.plot(X, Y_pred)
+        ax.set_title(f"k={k:.2f}, tau={tau:.2f}, Pontos={npoints}")
+    else:
+        x = X
+        y = Y_pred
+        # extract parameters data
+        p_hst  = cvg_hst[:,2:]
+        p_fit  = p_hst[-1,:]
+        y_fit = levenberg.lm_func(x,np.array([p_fit]).T)
+    
+        # define fonts used for plotting
+        font_axes = {'family': 'serif',
+            'weight': 'normal',
+            'size': 12}
+        font_title = {'family': 'serif',
+            'weight': 'normal',
+            'size': 14}       
+    
+        # define colors and markers used for plotting
+        n = len(p_fit)
+        colors = pl.cm.ocean(np.linspace(0,.75,n))
+        markers = ['o','s','D','v']    
+    
+        # create plot of raw data and fitted curve
+        fig = plt.figure()
+        gs = gridspec.GridSpec(2, 2)
+        ax1 = fig.add_subplot(gs[0, :])
+        ax1.plot(x,y,'wo',markeredgecolor='black',label='Raw data')
+        ax1.plot(x,y_fit,'r--',label='Fitted curve',linewidth=2)
+        ax1.set_xlabel('t',fontdict=font_axes)
+        ax1.set_ylabel('y(t)',fontdict=font_axes)
+        ax1.set_title('Data fitting',fontdict=font_title)
+        ax1.legend()
+    
+        ax2 = fig.add_subplot(gs[1, 0])
+        # create plot showing convergence of parameters
+        for i in range(n):
+            ax2.plot(cvg_hst[:,0],p_hst[:,i]/p_hst[0,i],color=colors[i],marker=markers[i],
+                 linestyle='-',markeredgecolor='black',label='p'+'${_%i}$'%(i+1))
+        ax2.set_xlabel('Function calls',fontdict=font_axes)
+        ax2.set_ylabel('Values (norm.)',fontdict=font_axes)
+        ax2.set_title('Convergence of parameters',fontdict=font_title) 
+        ax2.legend()
+            
+        ax3 = fig.add_subplot(gs[1, 1])
+        # create plot showing histogram of residuals
+        sns.histplot(ax=ax3,data=y_fit-y,color='deepskyblue')
+        ax3.set_xlabel('Residual error',fontdict=font_axes)
+        ax3.set_ylabel('Frequency',fontdict=font_axes)
+        ax3.set_title('Histogram of residuals',fontdict=font_title)
+        plt.tight_layout()
 
+    # Step 2: Save Figure to BytesIO
+    img_bytesio = BytesIO()
+    plt.savefig(img_bytesio, format='png')
+    img_bytesio.seek(0)
+
+    # Step 3: Serve BytesIO Object in Flask
+    return send_file(img_bytesio, mimetype='image/png')
+
+
+@app.route('/gradient-image', methods=["POST"])
+def gradient_image():
+    global Y_pred, tau, k, npoints, method
+    method = "grad"
+    # Get form data
+    npoints = int(request.form['npoints'])
+    iterations = int(request.form['iterations'])
+    learning_rate = float(request.form['learning_rate'])
+    tolerance = float(request.form['tolerance'])
+    myX, myY = get_xy()
+
+    k, tau = solvers.gradient_descent(myX, myY, iterations, learning_rate, tolerance)
+    Y_pred = k*(1 - np.exp(-X/tau))
+    return redirect('/')
+
+
+@app.route('/newton-image', methods=["POST"])
+def newton_image():
+    global Y_pred, tau, k, npoints, method
+    method = "newton"
+    # Get form data
+    npoints = int(request.form['npoints'])
+    iterations = int(request.form['iterations'])
+    tolerance = float(request.form['tolerance'])
+    k0 = float(request.form['k0'])
+    tau0 = float(request.form['tau0'])
+    
+    myX, myY = get_xy()
+
+    k, tau = solvers.Gauss_Newton(myX, myY, k0, tau0, tolerance, iterations)
+    
+    Y_pred = k*(1 - np.exp(-X/tau))
+    return redirect('/')
+
+
+@app.route('/levenberg-image', methods=["POST"])
+def levenberg_image():
+    global Y_pred, tau, k, npoints, method, cvg_hst
+    method = "lev"
+    # Get form data
+    npoints = int(request.form['npoints'])
+    k0 = float(request.form['k0'])
+    tau0 = float(request.form['tau0'])
+    
+    myX, myY = get_xy()
+
+    p_fit,Chi_sq,sigma_p,sigma_y,corr,R_sq,cvg_hst = levenberg.lm(
+        np.array([[k0, tau0]]).T, myX, myY)
+    k, tau = p_fit[0][0], p_fit[1][0]
+    
+    Y_pred = k*(1 - np.exp(-X/tau))
+    return redirect('/')
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
