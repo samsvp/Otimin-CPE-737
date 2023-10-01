@@ -51,8 +51,10 @@ def image():
         # Step 1: Generate Matplotlib Figure
         fig, ax = plt.subplots()
         ax.scatter(solvers.X, solvers.y, marker='o')
+        ax.set_xlabel('t')
+        ax.set_ylabel('y(t)')
         ax.plot(X, Y_pred)
-        ax.set_title(f"k={k:.2f}, tau={tau:.2f}, Pontos={npoints}")
+        ax.set_title(f"K={k:.2f}, tau={tau:.2f}, Pontos={npoints}, Método: {method.title()}")
     else:
         x = X
         y = Y_pred
@@ -60,14 +62,6 @@ def image():
         p_hst  = cvg_hst[:,2:]
         p_fit  = p_hst[-1,:]
         y_fit = levenberg.lm_func(x,np.array([p_fit]).T)
-    
-        # define fonts used for plotting
-        font_axes = {'family': 'serif',
-            'weight': 'normal',
-            'size': 12}
-        font_title = {'family': 'serif',
-            'weight': 'normal',
-            'size': 14}       
     
         # define colors and markers used for plotting
         n = len(p_fit)
@@ -78,29 +72,28 @@ def image():
         fig = plt.figure()
         gs = gridspec.GridSpec(2, 2)
         ax1 = fig.add_subplot(gs[0, :])
-        ax1.plot(x,y,'wo',markeredgecolor='black',label='Raw data')
-        ax1.plot(x,y_fit,'r--',label='Fitted curve',linewidth=2)
-        ax1.set_xlabel('t',fontdict=font_axes)
-        ax1.set_ylabel('y(t)',fontdict=font_axes)
-        ax1.set_title('Data fitting',fontdict=font_title)
-        ax1.legend()
+        ax1.scatter(solvers.X,solvers.y,marker='o')
+        ax1.plot(x,y_fit)
+        ax1.set_xlabel('t')
+        ax1.set_ylabel('y(t)')
+        ax1.set_title(f"K={k:.2f}, tau={tau:.2f}, Pontos={npoints}, Método: {method.title()}")
     
         ax2 = fig.add_subplot(gs[1, 0])
         # create plot showing convergence of parameters
         for i in range(n):
             ax2.plot(cvg_hst[:,0],p_hst[:,i]/p_hst[0,i],color=colors[i],marker=markers[i],
                  linestyle='-',markeredgecolor='black',label='p'+'${_%i}$'%(i+1))
-        ax2.set_xlabel('Function calls',fontdict=font_axes)
-        ax2.set_ylabel('Values (norm.)',fontdict=font_axes)
-        ax2.set_title('Convergence of parameters',fontdict=font_title) 
+        ax2.set_xlabel('Iterações')
+        ax2.set_ylabel('Valores (norma)')
+        ax2.set_title('Convergencia de parametros') 
         ax2.legend()
             
         ax3 = fig.add_subplot(gs[1, 1])
         # create plot showing histogram of residuals
         sns.histplot(ax=ax3,data=y_fit-y,color='deepskyblue')
-        ax3.set_xlabel('Residual error',fontdict=font_axes)
-        ax3.set_ylabel('Frequency',fontdict=font_axes)
-        ax3.set_title('Histogram of residuals',fontdict=font_title)
+        ax3.set_xlabel('Erro residual')
+        ax3.set_ylabel('Frequência')
+        ax3.set_title('Histograma de residuos')
         plt.tight_layout()
 
     # Step 2: Save Figure to BytesIO
@@ -161,6 +154,24 @@ def levenberg_image():
     p_fit,Chi_sq,sigma_p,sigma_y,corr,R_sq,cvg_hst = levenberg.lm(
         np.array([[k0, tau0]]).T, myX, myY)
     k, tau = p_fit[0][0], p_fit[1][0]
+    
+    Y_pred = k*(1 - np.exp(-X/tau))
+    return redirect('/')
+
+
+@app.route('/bfgs-image', methods=["POST"])
+def bfgs_image():
+    global Y_pred, tau, k, npoints, method
+    method = "bfgs"
+    # Get form data
+    npoints = int(request.form['npoints'])
+    k0 = float(request.form['k0'])
+    tau0 = float(request.form['tau0']) 
+    iterations = int(request.form['iterations'])
+
+    myX, myY = get_xy()
+
+    k, tau = solvers.BFGS([k0, tau0], myX, myY, iterations)
     
     Y_pred = k*(1 - np.exp(-X/tau))
     return redirect('/')

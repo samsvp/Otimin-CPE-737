@@ -48,24 +48,25 @@
         <option value="gradiente" selected="selected">Descida de Gradiente</option>
         <option value="gauss_newton">Gauss Newton</option>
         <option value="lev">Levenberg-Marquardt</option>
+        <option value="bfgs">BFGS</option>
     </select>
 
     <form id="myform" method="post" action="/gradient-image">
         <label for="npoints">Números de pontos</label>
         <select name="npoints" required>
+            <option value="-1">Todos</option>
             <option value="3">3</option>
             <option value="5">5</option>
-            <option value="-1">Todos</option>
         </select>
 
         <label for="iterations">Iterações:</label>
-        <input type="number" name="iterations" step="10" required value="100000">
+        <input name="iterations" step="10" required value="100000">
 
         <label for="learning_rate">Learning Rate:</label>
-        <input type="number" name="learning_rate" step="0.01" required value="0.001">
+        <input name="learning_rate" step="0.01" required value="0.001">
 
         <label for="tolerance">Tolerância:</label>
-        <input type="number" name="tolerance" step="0.01" required value="1e-10">
+        <input name="tolerance" required value="1e-10">
         
         <button type="submit">Generate Plot</button>
     </form>
@@ -79,19 +80,19 @@
          const gd_html = `
         <label for="npoints">Números de pontos</label>
         <select name="npoints" required>
+            <option value="-1">Todos</option>
             <option value="3">3</option>
             <option value="5">5</option>
-            <option value="-1">Todos</option>
         </select>
 
         <label for="iterations">Iterações:</label>
-        <input type="number" name="iterations" step="10" required value="100000">
+        <input name="iterations" step="10" required value="100000">
 
         <label for="learning_rate">Learning Rate:</label>
-        <input type="number" name="learning_rate" step="0.01" required value="0.001">
+        <input name="learning_rate" step="0.01" required value="0.001">
 
         <label for="tolerance">Tolerância:</label>
-        <input type="number" name="tolerance" step="0.01" required value="1e-10">
+        <input name="tolerance" step="0.01" required value="1e-10">
         
         <button type="submit">Generate Plot</button>
         `;
@@ -99,22 +100,22 @@
         const newton_html = `
         <label for="npoints">Números de pontos</label>
         <select name="npoints" required>
+            <option value="-1">Todos</option>
             <option value="3">3</option>
             <option value="5">5</option>
-            <option value="-1">Todos</option>
         </select>
 
         <label for="iterations">Iterações:</label>
-        <input type="number" name="iterations" step="10" required value="100">
+        <input name="iterations" step="10" required value="100">
 
         <label for="tolerance">Tolerância:</label>
-        <input type="number" name="tolerance" step="0.01" required value="1e-10">
+        <input name="tolerance" step="0.01" required value="1e-10">
         
         <label for="k0">K inicial:</label>
-        <input type="number" name="k0" step="1" required value="10">
+        <input name="k0" step="1" required value="10">
         
         <label for="tau0">Tau inicial:</label>
-        <input type="number" name="tau0" step="1" required value="1">
+        <input name="tau0" step="1" required value="1">
 
         <button type="submit">Generate Plot</button>
         `;
@@ -122,16 +123,36 @@
         const lev_html = `
         <label for="npoints">Números de pontos</label>
         <select name="npoints" required>
+            <option value="-1">Todos</option>
             <option value="3">3</option>
             <option value="5">5</option>
-            <option value="-1">Todos</option>
         </select>
 
         <label for="k0">K inicial:</label>
-        <input type="number" name="k0" step="1" required value="10">
+        <input name="k0" step="1" required value="10">
         
         <label for="tau0">Tau inicial:</label>
-        <input type="number" name="tau0" step="1" required value="10">
+        <input name="tau0" step="1" required value="10">
+
+        <button type="submit">Generate Plot</button>
+        `;
+
+        const bfgs_html = `
+        <label for="npoints">Números de pontos</label>
+        <select name="npoints" required>
+            <option value="-1">Todos</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+        </select>
+
+        <label for="iterations">Iterações:</label>
+        <input name="iterations" step="10" required value="100">
+        
+        <label for="k0">K inicial:</label>
+        <input name="k0" step="0.2" required value="0.5">
+        
+        <label for="tau0">Tau inicial:</label>
+        <input name="tau0" step="0.2" required value="0.5">
 
         <button type="submit">Generate Plot</button>
         `;
@@ -150,6 +171,9 @@
             } else if (selectedMethod == "lev") {
                 myform.innerHTML = lev_html;
                 myform.action = "/levenberg-image"
+            } else if (selectedMethod == "bfgs") {
+                myform.innerHTML = bfgs_html;
+                myform.action = "/bfgs-image"
             }
             // You can perform additional actions based on the selected method if needed
             console.log('Selected Method:', selectedMethod);
