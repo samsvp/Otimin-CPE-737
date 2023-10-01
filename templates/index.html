@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matplotlib Figure in Flask</title>
+    <title>Otimização Trabalho 1</title>
     <style>
         body {
             display: flex;
@@ -49,6 +49,7 @@
         <option value="gauss_newton">Gauss Newton</option>
         <option value="lev">Levenberg-Marquardt</option>
         <option value="bfgs">BFGS</option>
+        <option value="cg">Gradiente Conjugado</option>
     </select>
 
     <form id="myform" method="post" action="/gradient-image">
@@ -157,7 +158,27 @@
         <button type="submit">Generate Plot</button>
         `;
 
-        // Function to handle the change in the "Método" input
+        const cg_html = `
+        <label for="npoints">Números de pontos</label>
+        <select name="npoints" required>
+            <option value="-1">Todos</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+        </select>
+
+        <label for="iterations">Iterações:</label>
+        <input name="iterations" step="10" required value="100">
+        
+        <label for="k0">K inicial:</label>
+        <input name="k0" step="1" required value="20">
+        
+        <label for="tau0">Tau inicial:</label>
+        <input name="tau0" step="1" required value="20">
+
+        <button type="submit">Generate Plot</button>
+        `;
+        
+         // Function to handle the change in the "Método" input
         function onMethodChange() {
             var methodSelect = document.getElementById('method');
             var selectedMethod = methodSelect.value;
@@ -174,6 +195,9 @@
             } else if (selectedMethod == "bfgs") {
                 myform.innerHTML = bfgs_html;
                 myform.action = "/bfgs-image"
+            } else if (selectedMethod == "cg") {
+                myform.innerHTML = cg_html;
+                myform.action = "/cg-image"
             }
             // You can perform additional actions based on the selected method if needed
             console.log('Selected Method:', selectedMethod);

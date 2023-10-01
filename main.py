@@ -8,7 +8,7 @@ import numpy as np
 
 import solvers
 import levenberg
-
+import cg
 
 app = Flask(__name__)
 
@@ -173,6 +173,30 @@ def bfgs_image():
 
     k, tau = solvers.BFGS([k0, tau0], myX, myY, iterations)
     
+    Y_pred = k*(1 - np.exp(-X/tau))
+    return redirect('/')
+
+
+@app.route('/cg-image', methods=["POST"])
+def cg_image():
+    global Y_pred, tau, k, npoints, method
+    method = "cg"
+    # Get form data
+    npoints = int(request.form['npoints'])
+    k0 = float(request.form['k0'])
+    tau0 = float(request.form['tau0']) 
+    iterations = int(request.form['iterations'])
+
+    myX, myY = get_xy()
+    def nonlinear_model(params, x):
+        K, tau = params
+        return K * (1 - np.exp(-x / tau))
+
+    def objective(params, x, y):
+        residuals = y - nonlinear_model(params, x)
+        return np.sum(residuals**2)
+    k, tau = cg.minimize_cg(objective, [k0, tau0], (myX, myY), maxiter=iterations)
+
     Y_pred = k*(1 - np.exp(-X/tau))
     return redirect('/')
 
